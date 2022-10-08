@@ -205,6 +205,7 @@ secret puzzle words can go. See valid arguments above.",
         version=f"%(prog)s {version('word_search_generator')}",
     )
     args = parser.parse_args(argv)
+    print(args)
 
     # check for mask preview first
     if args.preview_masks:
