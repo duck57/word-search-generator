@@ -132,7 +132,7 @@ class Game:
 
         # guide code for later dev, currently nothing uses this
         injected_words: WordList = []  # this will become an input param or something
-        self._word_list_demo = clean_words(
+        self._word_list_demo = remove_dupes_and_substrings(
             *self.cleanup_input(words),
             *self.cleanup_input(secret_words, True),
             *injected_words,
@@ -703,7 +703,7 @@ once more decisions on #51 implementation are made.
 """
 
 
-def clean_words(*words: Word) -> WordList:
+def remove_dupes_and_substrings(*words: Word) -> WordList:
     checked_word_str, verified_words = " ", []  # type: ignore  # mypy doesn't like this
     for w in sorted(words):
         if w.text in checked_word_str:

@@ -106,11 +106,11 @@ def test_successful_merge():
 
 
 def test_word_and_merge():
-    assert high_priority_secret & NULL_WORD is high_priority_secret
+    assert high_priority_secret.equivalent_settings(high_priority_secret & NULL_WORD)
 
 
 def test_word_xor_merge():
-    assert NULL_WORD ^ low_priority_word is low_priority_word
+    assert low_priority_word.equivalent_settings(NULL_WORD ^ low_priority_word)
 
 
 def test_invalid_merge():

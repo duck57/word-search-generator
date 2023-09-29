@@ -176,6 +176,7 @@ class Word:
 
         Args:
             validators (list[Validator]): Validators to test.
+            placed_words (list[str]): Words already on the board
 
         Raises:
             TypeError: Incorrect validator type provided.
@@ -330,19 +331,7 @@ class Word:
         self, w2: "Word", method: Literal["|", "&", "^", "and", "or"] = "|"
     ) -> "Word":
         """Merges identical Words."""
-        # should this return a new Word or be a mutation method?
-        if not self:
-            return w2
-        if not w2:
-            return self
-        if self != w2:
-            raise ValueError("Words must have identical text to merge.")
-        return Word(
-            self.text,
-            self.secret and w2.secret,  # non-secret takes priority
-            min(self.priority, w2.priority),  # the lowest priority wins
-            eval(f"self.allowed_directions {method} w2.allowed_directions"),
-        )
+        return merge_words(method, self, w2)
 
     def __and__(self, other: "Word") -> "Word":
         return self.merge(other, "&")
@@ -357,6 +346,14 @@ class Word:
         if not isinstance(__o, Word):
             return False
         return self.text == __o.text
+
+    def equivalent_settings(self, __o: "Word") -> bool:
+        return (
+            self == __o
+            and self.secret == __o.secret
+            and self.priority == __o.priority
+            and self.allowed_directions == __o.allowed_directions
+        )
 
     def __hash__(self) -> int:
         """Returns the hashes value of the word text."""
@@ -383,6 +380,34 @@ class Word:
 
     def __xor__(self, other) -> "Word":
         return self.merge(other, "^")
+
+
+def merge_words(method: Literal["|", "&", "^", "and", "or"], *words: Word) -> Word:
+    if len(words) == 1:
+        return words[0]
+    t = ""
+    p = 2048
+    d = set()
+    s = True
+
+    # all this to avoid looping through the list with four separate comprehensions
+    for w in words:
+        if w.text != t:
+            if not w:
+                continue  # skip empties
+            if t:
+                raise ValueError(
+                    "Words must have identical text to merge.\n\t" + f"{w} != {t}"
+                )
+            else:
+                t = w.text  # set the prototype
+        s = s and w.secret
+        p = min(p, w.priority)
+        # there has to be a better way for d
+        d = eval(f"d {method} w.allowed_directions")
+    if not t:  # no word has text
+        return NULL_WORD  # or raise ValueError?
+    return Word(t, s, p, d)
 
 
 WordSet: TypeAlias = set[Word]
