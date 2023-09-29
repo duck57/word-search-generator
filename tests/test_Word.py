@@ -66,9 +66,11 @@ def test_word_length():
     w = Word("test")
     assert len(w) == 4
 
+
 def test_word_bool_true():
     w = Word("test")
     assert w
+
 
 def test_word_bool_false():
     w = Word("")

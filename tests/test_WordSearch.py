@@ -263,7 +263,7 @@ def test_unplaced_secret_words():
 
 def test_invalid_export_format(ws: WordSearch):
     with pytest.raises(ValueError):
-        ws.save("test.pdf", format="GIF")
+        ws.save("test.pdf", format="GIF")  # type: ignore
 
 
 def test_missing_word_error():
