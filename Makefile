@@ -26,8 +26,8 @@ cleanup: lint typing ## format, lint, and type check
 
 lint: ## lint the app using flake8 and ruff
 	@echo "📝 linting..."
+	$(BIN)/ruff --fix src tests
 	$(BIN)/flake8 src tests
-	$(BIN)/ruff src tests
 
 typing: ## type check the app using mypy
 	@echo "📝 type checking..."
