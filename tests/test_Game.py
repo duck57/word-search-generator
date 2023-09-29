@@ -16,7 +16,14 @@ def test_empty_object(empty_game: Game):
     assert len(empty_game.words) == 0
 
 
-@pytest.mark.parametrize(
+def test_invalid_direction_iterable():
+    g = Game()
+    # probably no need to add "| Iterable" to the type hint of Game.__init__(level)
+    with pytest.raises(ValueError):
+        g.directions = ["NE", "no."]  # type: ignore
+
+
+_level_param_test = (
     "level,expected",
     [
         (1, config.level_dirs[1]),
@@ -26,45 +33,29 @@ def test_empty_object(empty_game: Game):
         (5, config.level_dirs[5]),
         (7, config.level_dirs[7]),
         (8, config.level_dirs[8]),
-        ("n", Direction.N),
-        ("NE", Direction.NE),
-        ("e", Direction.E),
-        ("SE", Direction.SE),
-        ("s", Direction.S),
-        ("SW", Direction.SW),
-        ("w", Direction.W),
-        ("NW", Direction.NW),
+        ("n", {Direction.N}),
+        ("NE", {Direction.NE}),
+        ("e", {Direction.E}),
+        ("SE", {Direction.SE}),
+        ("s", {Direction.S}),
+        ("SW", {Direction.SW}),
+        ("w", {Direction.W}),
+        ("NW", {Direction.NW}),
     ],
 )
+
+
+@pytest.mark.parametrize(*_level_param_test)
 def test_set_puzzle_level(level: int | str, expected: set[Direction]):
     g = Game(level=level)
-    g.directions == expected
+    assert g.directions == expected
 
 
-@pytest.mark.parametrize(
-    "level,expected",
-    [
-        (1, config.level_dirs[1]),
-        (2, config.level_dirs[2]),
-        (3, config.level_dirs[3]),
-        (4, config.level_dirs[4]),
-        (5, config.level_dirs[5]),
-        (7, config.level_dirs[7]),
-        (8, config.level_dirs[8]),
-        ("n", Direction.N),
-        ("NE", Direction.NE),
-        ("e", Direction.E),
-        ("SE", Direction.SE),
-        ("s", Direction.S),
-        ("SW", Direction.SW),
-        ("w", Direction.W),
-        ("NW", Direction.NW),
-    ],
-)
-def test_set_secret_level(words, level: int, expected: set[Direction]):
-    ws = WordSearch(words)
-    ws.secret_directions = level  # type: ignore[assignment]
-    ws.directions == expected
+@pytest.mark.parametrize(*_level_param_test)
+def test_set_secret_level(level: int, expected: set[Direction]):
+    ws = WordSearch(secret_level=level)
+    ws.secret_directions = level  # type: ignore
+    assert ws.secret_directions == expected
 
 
 @pytest.mark.parametrize(
