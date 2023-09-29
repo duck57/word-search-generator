@@ -1,16 +1,24 @@
 import json
 from pathlib import Path
-from typing import Iterable, TypeAlias
+from typing import Iterable, Literal, TypeAlias
 
 from .. import config, utils
+from ..config import hidden_word_priority, secret_word_priority
 from ..formatter import Formatter
 from ..generator import Generator
 from ..mask import CompoundMask, Mask
 from ..validator import Validator
-from ..word import Direction, KeyInfo, KeyInfoJson, Word, WordSet
+from ..word import (
+    Direction,
+    DirectionSet,
+    KeyInfo,
+    KeyInfoJson,
+    Word,
+    WordList,
+    WordSet,
+)
 
 Puzzle: TypeAlias = list[list[str]]
-DirectionSet: TypeAlias = set[Direction]
 Key: TypeAlias = dict[str, KeyInfo]
 KeyJson: TypeAlias = dict[str, KeyInfoJson]
 
@@ -60,10 +68,10 @@ class Game:
 
     def __init__(
         self,
-        words: str | None = None,
+        words: str = "",
         level: int | str | None = None,
         size: int | None = None,
-        secret_words: str | None = None,
+        secret_words: str = "",
         secret_level: int | str | None = None,
         *,
         include_all_words: bool = False,
@@ -107,6 +115,14 @@ class Game:
             validators if validators else self.DEFAULT_VALIDATORS
         )
 
+        # determine valid directions
+        self._directions: DirectionSet = (
+            self.validate_level(level) if level else self.validate_level(2)
+        )
+        self._secret_directions: DirectionSet = (
+            self.validate_level(secret_level) if secret_level else self.directions
+        )
+
         # setup words
         # in case of dupes, add secret words first so they are overwritten
         if secret_words:
@@ -114,12 +130,12 @@ class Game:
         if words:
             self._process_input(words, "add")
 
-        # determine valid directions
-        self._directions: DirectionSet = (
-            self.validate_level(level) if level else self.validate_level(2)
-        )
-        self._secret_directions: DirectionSet = (
-            self.validate_level(secret_level) if secret_level else self.directions
+        # guide code for later dev, currently nothing uses this
+        injected_words: WordList = []  # this will become an input param or something
+        self._word_list_demo = clean_words(
+            *self.cleanup_input(words),
+            *self.cleanup_input(secret_words, True),
+            *injected_words,
         )
 
         # setup required defaults
@@ -217,7 +233,7 @@ class Game:
     @property
     def cropped_size(self) -> tuple[int, int]:
         """Size (in characters) of `self.cropped_puzzle` as a (width, height) tuple."""
-        return (len(self.cropped_puzzle[0]), len(self.cropped_puzzle))
+        return len(self.cropped_puzzle[0]), len(self.cropped_puzzle)
 
     @property
     def key(self) -> Key:
@@ -260,7 +276,7 @@ class Game:
         """Possible directions for puzzle words.
 
         Args:
-            val (int | str | Iterable[str]): Either a preset puzzle level (int),
+            value (int | str | Iterable[str]): Either a preset puzzle level (int),
             cardinal directions as a comma separated string, or an iterable
             of valid directions from the Direction object.
         """
@@ -290,7 +306,7 @@ class Game:
         """Possible directions for secret puzzle words.
 
         Args:
-            val (int | str | Iterable[str]): Either a preset puzzle level (int),
+            value (int | str | Iterable[str]): Either a preset puzzle level (int),
             valid cardinal directions as a comma separated string, or an iterable
             of valid cardinal directions.
         """
@@ -307,7 +323,7 @@ class Game:
         """Set the puzzle size. All puzzles are square.
 
         Args:
-            val (int): Size in grid squares (characters).
+            value (int): Size in grid squares (characters).
 
         Raises:
             TypeError: Must be an integer.
@@ -359,7 +375,9 @@ class Game:
     def save(
         self,
         path: str | Path,
-        format: str = "PDF",
+        # the type sig in the Formatter classes should be the uppercase only
+        # turn everything uppercase here
+        format: Literal["CSV", "JSON", "PDF", "csv", "json", "pdf"] = "PDF",
         solution: bool = False,
         *args,
         **kwargs,
@@ -384,7 +402,9 @@ class Game:
             if not self.DEFAULT_FORMATTER:
                 raise MissingFormatterError()
             self.formatter = self.DEFAULT_FORMATTER
-        return str(self.formatter.save(self, path, format, solution, *args, **kwargs))
+        return str(
+            self.formatter.save(self, path, format.upper(), solution, *args, **kwargs)
+        )
 
     # *************************************************************** #O
     # ******************** PROCESSING/GENERATION ******************** #
@@ -425,7 +445,13 @@ class Game:
         if self.force_all_words and self.unplaced_hidden_words:
             raise MissingWordError("All words could not be placed in the puzzle.")
 
-    def _process_input(self, words: str, action: str = "add", secret: bool = False):
+    def _process_input(
+        self,
+        words: str,
+        action: Literal["add", "remove", "replace"] = "add",
+        secret: bool = False,
+    ):
+        # this function will need major rework for the changes in #51
         if secret:
             clean_words = self.cleanup_input(words, secret=True)
         else:
@@ -485,6 +511,7 @@ class Game:
     def cleanup_input(self, words: str, secret: bool = False) -> WordSet:
         """Cleanup provided input string. Removing spaces
         one-letter words, and words with punctuation."""
+        # change the return type to WordList with further progress on #51
         if not isinstance(words, str):
             raise TypeError(
                 "Words must be a string separated by spaces, commas, or new lines"
@@ -495,14 +522,20 @@ class Game:
         word_list = ",".join(words.split(" ")).split(",")
         # iterate through all words and pick first set that match criteria
         word_set: WordSet = set()
+        p, d = (
+            (secret_word_priority, self.secret_directions)
+            if secret
+            else (hidden_word_priority, self.directions)
+        )
         while word_list and len(word_set) <= config.max_puzzle_words:
             word = word_list.pop(0)
             if word:
-                word_set.add(Word(word, secret=secret))
+                word_set.add(Word(word, secret, p, d))
         return word_set
 
+    @staticmethod
     def validate_direction_iterable(
-        self, d: Iterable[str | tuple[int, int] | Direction]
+        d: Iterable[str | tuple[int, int] | Direction]
     ) -> DirectionSet:
         """Validates that all the directions in d are found as keys to
         config.dir_moves and therefore are valid directions."""
@@ -662,3 +695,30 @@ class Game:
         if not self.puzzle or not self.formatter:
             return "Empty puzzle."
         return self.formatter.show(self)
+
+
+"""
+Demo functions.  These should be moved into Game methods or inlined
+once more decisions on #51 implementation are made.
+"""
+
+
+def clean_words(*words: Word) -> WordList:
+    checked_word_str, verified_words = " ", []  # type: ignore  # mypy doesn't like this
+    for w in sorted(words):
+        if w.text in checked_word_str:
+            # word is a dupe or substring of an existing word
+            continue
+        if any(wd.text in w.text for wd in verified_words):
+            # adding this word would turn a higher priority word into a substring
+            continue
+        # word is cleared to be added
+        checked_word_str += w.text + " "
+        verified_words.append(w)
+    return verified_words
+
+
+def remove_from_word_list(self: WordList, to_remove: WordList) -> WordList:
+    # Should this care about priority at all?
+    # assumes self is not already sorted
+    return [w for w in self if w not in to_remove]

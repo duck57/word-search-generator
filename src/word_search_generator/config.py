@@ -1,4 +1,11 @@
-from .word import Direction
+from .word import (
+    ANY_DIRECTION,
+    CARDINALS,
+    DIAGONALS,
+    FORWARD_DIRS,
+    NO_DIRECTION,
+    Direction,
+)
 
 # puzzle settings
 min_puzzle_size = 5
@@ -6,35 +13,25 @@ max_puzzle_size = 50
 min_puzzle_words = 1
 max_puzzle_words = 100
 max_fit_tries = 1000
+hidden_word_priority = 2
+secret_word_priority = 4
 
 # puzzle grid settings
 ACTIVE = "*"
 INACTIVE = "#"
 
 # puzzle difficulty levels
+# should these all be frozen sets instead?
 level_dirs = {
-    -1: set(),  # no valid directions
+    -1: NO_DIRECTION,
     1: {  # right or down
         Direction.E,
         Direction.S,
     },
-    2: {  # right-facing or down
-        Direction.NE,
-        Direction.E,
-        Direction.SE,
-        Direction.S,
-    },
-    3: {  # any direction
-        Direction.N,
-        Direction.NE,
-        Direction.E,
-        Direction.SE,
-        Direction.S,
-        Direction.SW,
-        Direction.W,
-        Direction.NW,
-    },
+    2: FORWARD_DIRS,
+    3: ANY_DIRECTION,
     4: {  # no E or S for better hiding
+        # ANY_DIRECTION - {Direction.S, Direction.E}
         Direction.N,
         Direction.NE,
         Direction.SE,
@@ -43,6 +40,7 @@ level_dirs = {
         Direction.NW,
     },
     5: {  # no E
+        # ANY_DIRECTION - {Direction.E}
         Direction.N,
         Direction.NE,
         Direction.SE,
@@ -51,18 +49,8 @@ level_dirs = {
         Direction.W,
         Direction.NW,
     },
-    7: {  # diagonals only
-        Direction.NE,
-        Direction.SE,
-        Direction.NW,
-        Direction.SW,
-    },
-    8: {  # no diagonals
-        Direction.N,
-        Direction.E,
-        Direction.W,
-        Direction.S,
-    },
+    7: DIAGONALS,
+    8: CARDINALS,
 }
 
 # pdf export settings

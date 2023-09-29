@@ -1,4 +1,13 @@
-from word_search_generator.word import Direction, Position, Word
+import pytest
+
+from word_search_generator.word import (
+    ANY_DIRECTION,
+    NO_DIRECTION,
+    NULL_WORD,
+    Direction,
+    Position,
+    Word,
+)
 
 
 def test_empty_start_row():
@@ -75,3 +84,35 @@ def test_word_bool_true():
 def test_word_bool_false():
     w = Word("")
     assert not w
+
+
+def test_set_directions():
+    w = Word("test")
+    w.allowed_directions = NO_DIRECTION
+    w.toggle_allowed_dirs()
+    w.flip_allowed_dirs()
+    assert w.allowed_directions == ANY_DIRECTION
+
+
+high_priority_secret = Word("test", True, 1, NO_DIRECTION)
+low_priority_word = Word("test", False, 93, ANY_DIRECTION)
+
+
+def test_successful_merge():
+    w = low_priority_word ^ high_priority_secret
+    assert w.allowed_directions == ANY_DIRECTION
+    assert w.secret is False
+    assert w.priority == 1
+
+
+def test_word_and_merge():
+    assert high_priority_secret & NULL_WORD is high_priority_secret
+
+
+def test_word_xor_merge():
+    assert NULL_WORD ^ low_priority_word is low_priority_word
+
+
+def test_invalid_merge():
+    with pytest.raises(ValueError):
+        high_priority_secret | Word("nope.")

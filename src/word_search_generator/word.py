@@ -1,9 +1,10 @@
 from enum import Enum, unique
-from typing import Iterable, NamedTuple, TypeAlias, TypedDict
+from typing import Callable, Iterable, Literal, NamedTuple, TypeAlias, TypedDict
 
 from .validator import Validator
 
 
+# should all this direction stuff be moved to direction.py?
 @unique
 class Direction(Enum):
     """
@@ -33,6 +34,94 @@ class Direction(Enum):
     def c_move(self) -> int:
         return self.value[1]
 
+    @property
+    def opposite(self) -> "Direction":
+        return Direction((-self.r_move, -self.c_move))
+
+    @property
+    def is_diagonal(self) -> bool:
+        return self.r_move != 0 and self.c_move != 0
+
+    @property
+    def is_cardinal(self) -> bool:
+        return not self.is_diagonal
+
+
+# check this doesn't cause type check problems
+# if it does, remove the | frozenset and alter ds_not
+DirectionSet: TypeAlias = set[Direction] | frozenset[Direction]
+
+
+def ds_not(ds: DirectionSet, freeze: bool = False) -> DirectionSet:
+    """Essentially DirectionSet.__not__()"""
+    s: Callable[..., DirectionSet] = frozenset if freeze else set
+    return s(ANY_DIRECTION - ds)
+
+
+def flip_dirs(ds: DirectionSet, freeze: bool = False) -> DirectionSet:
+    """a.k.a. opposite_dirs()"""
+    s: Callable[..., DirectionSet] = frozenset if freeze else set
+    return s(d.opposite for d in ds)
+
+
+# some of these could be implemented with ds_not and a previous definition
+# these are frozenset so they can be used as default values
+# perhaps the level_dirs in config.py should be similarly updated?
+NO_DIRECTION: DirectionSet = frozenset()
+# ANY_DIRECTION = frozenset(Direction.__members__.values())
+ANY_DIRECTION = frozenset(
+    {
+        Direction.N,
+        Direction.NE,
+        Direction.E,
+        Direction.SE,
+        Direction.S,
+        Direction.SW,
+        Direction.W,
+        Direction.NW,
+    }
+)
+ALL_DIRECTIONS = ANY_DIRECTION  # name alias
+toggle_ds = ds_not  # alias
+# CARDINALS = frozenset(d for d in ALL_DIRECTIONS if d.is_cardinal)
+# CARDINALS = ds_not(DIAGONALS, True)  # move me if chosen
+CARDINALS = frozenset(
+    {
+        Direction.N,
+        Direction.E,
+        Direction.W,
+        Direction.S,
+    }
+)
+# DIAGONALS = ds_not(CARDINALS, True)
+# DIAGONALS = frozenset(d for d in ALL_DIRECTIONS if d.is_diagonal)
+DIAGONALS = frozenset(
+    {
+        Direction.NE,
+        Direction.SE,
+        Direction.SW,
+        Direction.NW,
+    }
+)
+FORWARD_DIRS = frozenset(
+    {
+        Direction.NE,
+        Direction.E,
+        Direction.SE,
+        Direction.S,
+    }
+)
+# BACKWARD_DIRS = ds_not(FORWARD_DIRS, True)
+# BACKWARD_DIRS = flip_dirs(FORWARD_DIRS, True)
+BACKWARD_DIRS = frozenset(
+    {
+        Direction.N,
+        Direction.NW,
+        Direction.W,
+        Direction.SW,
+    }
+)
+
 
 class Position(NamedTuple):
     row: int | None
@@ -59,6 +148,8 @@ class Word:
         self,
         text: str,
         secret: bool = False,
+        priority: int = 3,
+        allowed_directions: DirectionSet = FORWARD_DIRS,
     ) -> None:
         """Initialize a Word Search puzzle Word."""
         self.text = text.upper().strip()
@@ -67,6 +158,16 @@ class Word:
         self.coordinates: list[tuple[int, int]] = []
         self.direction: Direction | None = None
         self.secret = secret
+        self.priority = priority
+        self._allowed_directions = allowed_directions
+
+    @property
+    def allowed_directions(self) -> DirectionSet:
+        return self._allowed_directions
+
+    @allowed_directions.setter
+    def allowed_directions(self, d: DirectionSet) -> None:
+        self._allowed_directions = d
 
     def validate(
         self, validators: Iterable[Validator], placed_words: list[str]
@@ -114,14 +215,14 @@ class Word:
         """Set the start position of the Word in the puzzle.
 
         Args:
-            val (Position): Tuple of (row, column)
+            value (Position): Tuple of (row, column)
         """
         self.start_row = value.row
         self.start_column = value.column
 
     @property
     def position_xy(self) -> Position:
-        """Returns a the word position with 1-based indexing
+        """Returns the word position with 1-based indexing
         and a familiar (x, y) coordinate system"""
         return Position(
             self.start_row + 1 if self.start_row is not None else self.start_row,
@@ -211,12 +312,40 @@ class Word:
             for y, x in self.coordinates
         ]
 
-    def remove_from_puzzle(self):
+    def remove_from_puzzle(self) -> None:
         """Remove word placement details when a puzzle is reset."""
         self.start_row = None
         self.start_column = None
         self.coordinates = []
         self.direction = None
+
+    def flip_allowed_dirs(self) -> None:
+        self._allowed_directions = flip_dirs(self._allowed_directions)
+
+    def toggle_allowed_dirs(self) -> None:
+        """Switches which directions are allows and which as invalid."""
+        self._allowed_directions = ds_not(self._allowed_directions)
+
+    def merge(
+        self, w2: "Word", method: Literal["|", "&", "^", "and", "or"] = "|"
+    ) -> "Word":
+        """Merges identical Words."""
+        # should this return a new Word or be a mutation method?
+        if not self:
+            return w2
+        if not w2:
+            return self
+        if self != w2:
+            raise ValueError("Words must have identical text to merge.")
+        return Word(
+            self.text,
+            self.secret and w2.secret,  # non-secret takes priority
+            min(self.priority, w2.priority),  # the lowest priority wins
+            eval(f"self.allowed_directions {method} w2.allowed_directions"),
+        )
+
+    def __and__(self, other: "Word") -> "Word":
+        return self.merge(other, "&")
 
     def __bool__(self) -> bool:
         """Returns the truthiness of a word.
@@ -237,13 +366,25 @@ class Word:
         """Returns the length of the word text."""
         return len(self.text)
 
+    def __lt__(self, other: "Word") -> bool:
+        """Sorts by lowest priority first, then longest word"""
+        if self.priority == other.priority:
+            return len(self) > len(other)
+        return self.priority < other.priority
+
+    def __or__(self, other: "Word") -> "Word":
+        return self.merge(other)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{self.text}', " + f"{self.secret})"
 
     def __str__(self) -> str:
         return self.text
 
+    def __xor__(self, other) -> "Word":
+        return self.merge(other, "^")
+
 
 WordSet: TypeAlias = set[Word]
-# in the future, add allowed_directions = set() and priority = 999
-NULL_WORD = Word("", True)
+WordList: TypeAlias = list[Word]
+NULL_WORD = Word("", True, 999, NO_DIRECTION)
