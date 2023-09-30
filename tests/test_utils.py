@@ -52,3 +52,7 @@ def test_float_range_negative():
 def test_max_length_random_words():
     # could be a param thing
     assert max([len(w) for w in hundred_random_words(92, 8)]) == 8
+
+
+def test_not_enough_words():
+    assert len(hundred_random_words(min_length=10)) < 100

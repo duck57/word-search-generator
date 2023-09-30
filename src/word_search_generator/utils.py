@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections import Counter
 from typing import TYPE_CHECKING, Any, Sized
 
 from . import config
@@ -178,3 +179,12 @@ def get_random_words(
         # if n is too large, shuffle the results
         return sorted(wl, key=lambda _: random.random())
     return random.sample(wl, n)
+
+
+def wl_stats() -> Counter[int]:  # pragma: no cover
+    return Counter(len(w) for w in WORD_LIST)
+
+
+def show_wl_stats() -> None:  # pragma: no cover
+    for lh, f in sorted(wl_stats().items(), reverse=True):
+        print(f"{lh}\t{f}")
