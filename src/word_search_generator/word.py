@@ -248,6 +248,8 @@ class Word:
     def __lt__(self, other: "Word") -> bool:
         """Sorts by lowest priority first, then longest word"""
         if self.priority == other.priority:
+                if len(self) == len(other):
+                    return not self.secret. # Secret words sort last as tiebreak
             return len(self) > len(other)
         return self.priority < other.priority
 
