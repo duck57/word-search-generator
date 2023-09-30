@@ -162,12 +162,19 @@ def get_answer_key_str(
 
 
 def get_random_words(
-    n: int, max_length: int | None = None, min_length: int = 2
+    n: int, max_length: int | None = None, min_length: int | None = None
 ) -> list[str]:
     """Return a list of random dictionary words."""
-    if max_length:
+    if max_length or min_length:
+        if not max_length:
+            max_length = 999  # should be plenty long
+        if not min_length:
+            min_length = 2  # WordSearch doesn't allow single-char words
         assert max_length >= min_length
-        return random.sample(
-            [word for word in WORD_LIST if min_length <= len(word) <= max_length], n
-        )
-    return random.sample(WORD_LIST, n)
+        wl = [word for word in WORD_LIST if min_length <= len(word) <= max_length]
+    else:
+        wl = WORD_LIST
+    if n > len(wl):
+        # if n is too large, shuffle the results
+        return sorted(wl, key=lambda _: random.random())
+    return random.sample(wl, n)
