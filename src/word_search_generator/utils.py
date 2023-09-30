@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import random
-from math import log2
 from typing import TYPE_CHECKING, Any, Sized
 
 from . import config
@@ -22,7 +21,9 @@ def calc_puzzle_size(words: WordSet, level: Sized, size: int | None = None) -> i
         # calculate multiplier for larger word lists so that most have room to fit
         multiplier = len(all_words) / 15 if len(all_words) > 15 else 1
         # level lengths in config.py are nice multiples of 2
-        l_size = log2(len(level)) if level else 1  # protect against log(0) in tests
+        l_size = (
+            math.log2(len(level)) if level else 1
+        )  # protect against log(0) in tests
         size = min(round(longest + l_size * 2 * multiplier), config.max_puzzle_size)
     return size
 
@@ -65,7 +66,7 @@ def distance(x: int, y: int, ratio: float) -> float:
 
 def in_bounds(x: int, y: int, width: int, height: int) -> bool:
     """Validate position (x, y) is within the supplied bounds."""
-    return x >= 0 and x < width and y >= 0 and y < height
+    return 0 <= x < width and 0 <= y < height
 
 
 def find_bounding_box(

@@ -247,18 +247,18 @@ class Word:
 
     def __lt__(self, other: "Word") -> bool:
         """
-        Sort. The lesser word sort first in a list. 
-        
+        Sort. The lesser word sort first in a list.
+
         1. Lowest priority
         2. Shortest length
         3. Secrets go last
         4. All else equal, alphabetical
         """
         if self.priority == other.priority:
-                if len(self) == len(other):
-                    if self.secret == other.secret:
-                        return self.text < other.text  # alphabetical as last resort
-                    return not self.secret  # Secret words sort last as tiebreak
+            if len(self) == len(other):
+                if self.secret == other.secret:
+                    return self.text < other.text  # alphabetical as last resort
+                return not self.secret  # Secret words sort last as tiebreak
             return len(self) > len(other)
         return self.priority < other.priority
 
