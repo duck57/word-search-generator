@@ -1,126 +1,8 @@
-from enum import Enum, unique
-from typing import Callable, Iterable, Literal, NamedTuple, TypeAlias, TypedDict
+from typing import Iterable, Literal, NamedTuple, TypeAlias, TypedDict
 
+from . import directions as _dirs
+from .direction import Direction, DirectionSet, ds_not, flip_dirs
 from .validator import Validator
-
-
-# should all this direction stuff be moved to direction.py?
-@unique
-class Direction(Enum):
-    """
-    If you want custom directions, like `"skipE": (0, 2)`, this is the
-    place to monkey-patch them in.
-
-    Tuples are listed in (∂row, ∂col) pairs, presumably b/c that makes
-    it easier to use with the Puzzle = list[list[chr]] format
-    """
-
-    # is there a better way to specify typing here?
-    # without hints here, the linter gets upset with my definitions of r/c_move
-    N: tuple[int, int] = (-1, 0)  # type: ignore
-    NE: tuple[int, int] = (-1, 1)  # type: ignore
-    E: tuple[int, int] = (0, 1)  # type: ignore
-    SE: tuple[int, int] = (1, 1)  # type: ignore
-    S: tuple[int, int] = (1, 0)  # type: ignore
-    SW: tuple[int, int] = (1, -1)  # type: ignore
-    W: tuple[int, int] = (0, -1)  # type: ignore
-    NW: tuple[int, int] = (-1, -1)  # type: ignore
-
-    @property
-    def r_move(self) -> int:
-        return self.value[0]
-
-    @property
-    def c_move(self) -> int:
-        return self.value[1]
-
-    @property
-    def opposite(self) -> "Direction":
-        return Direction((-self.r_move, -self.c_move))
-
-    @property
-    def is_diagonal(self) -> bool:
-        return self.r_move != 0 and self.c_move != 0
-
-    @property
-    def is_cardinal(self) -> bool:
-        return not self.is_diagonal
-
-
-# check this doesn't cause type check problems
-# if it does, remove the | frozenset and alter ds_not
-DirectionSet: TypeAlias = set[Direction] | frozenset[Direction]
-
-
-def ds_not(ds: DirectionSet, freeze: bool = False) -> DirectionSet:
-    """Essentially DirectionSet.__not__()"""
-    s: Callable[..., DirectionSet] = frozenset if freeze else set
-    return s(ANY_DIRECTION - ds)
-
-
-def flip_dirs(ds: DirectionSet, freeze: bool = False) -> DirectionSet:
-    """a.k.a. opposite_dirs()"""
-    s: Callable[..., DirectionSet] = frozenset if freeze else set
-    return s(d.opposite for d in ds)
-
-
-# some of these could be implemented with ds_not and a previous definition
-# these are frozenset so they can be used as default values
-# perhaps the level_dirs in config.py should be similarly updated?
-NO_DIRECTION: DirectionSet = frozenset()
-# ANY_DIRECTION = frozenset(Direction.__members__.values())
-ANY_DIRECTION = frozenset(
-    {
-        Direction.N,
-        Direction.NE,
-        Direction.E,
-        Direction.SE,
-        Direction.S,
-        Direction.SW,
-        Direction.W,
-        Direction.NW,
-    }
-)
-ALL_DIRECTIONS = ANY_DIRECTION  # name alias
-toggle_ds = ds_not  # alias
-# CARDINALS = frozenset(d for d in ALL_DIRECTIONS if d.is_cardinal)
-# CARDINALS = ds_not(DIAGONALS, True)  # move me if chosen
-CARDINALS = frozenset(
-    {
-        Direction.N,
-        Direction.E,
-        Direction.W,
-        Direction.S,
-    }
-)
-# DIAGONALS = ds_not(CARDINALS, True)
-# DIAGONALS = frozenset(d for d in ALL_DIRECTIONS if d.is_diagonal)
-DIAGONALS = frozenset(
-    {
-        Direction.NE,
-        Direction.SE,
-        Direction.SW,
-        Direction.NW,
-    }
-)
-FORWARD_DIRS = frozenset(
-    {
-        Direction.NE,
-        Direction.E,
-        Direction.SE,
-        Direction.S,
-    }
-)
-# BACKWARD_DIRS = ds_not(FORWARD_DIRS, True)
-# BACKWARD_DIRS = flip_dirs(FORWARD_DIRS, True)
-BACKWARD_DIRS = frozenset(
-    {
-        Direction.N,
-        Direction.NW,
-        Direction.W,
-        Direction.SW,
-    }
-)
 
 
 class Position(NamedTuple):
@@ -149,7 +31,7 @@ class Word:
         text: str,
         secret: bool = False,
         priority: int = 3,
-        allowed_directions: DirectionSet = FORWARD_DIRS,
+        allowed_directions: DirectionSet = _dirs.FORWARD,
     ) -> None:
         """Initialize a Word Search puzzle Word."""
         self.text = text.upper().strip()
@@ -331,7 +213,7 @@ class Word:
         self, w2: "Word", method: Literal["|", "&", "^", "and", "or"] = "|"
     ) -> "Word":
         """Merges identical Words."""
-        return merge_words(method, self, w2)
+        return merge_words(self, w2, method=method)
 
     def __and__(self, other: "Word") -> "Word":
         return self.merge(other, "&")
@@ -382,7 +264,9 @@ class Word:
         return self.merge(other, "^")
 
 
-def merge_words(method: Literal["|", "&", "^", "and", "or"], *words: Word) -> Word:
+def merge_words(
+    *words: Word, method: Literal["|", "&", "^", "and", "or"] = "|"
+) -> Word:
     if len(words) == 1:
         return words[0]
     t = ""
@@ -412,4 +296,4 @@ def merge_words(method: Literal["|", "&", "^", "and", "or"], *words: Word) -> Wo
 
 WordSet: TypeAlias = set[Word]
 WordList: TypeAlias = list[Word]
-NULL_WORD = Word("", True, 999, NO_DIRECTION)
+NULL_WORD = Word("", True, 999, _dirs.NONE)

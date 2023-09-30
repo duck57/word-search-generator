@@ -46,3 +46,7 @@ def test_float_range_invalid_args():
 
 def test_float_range_negative():
     assert len(list(utils.float_range(0.40, 0.30, -0.1))) == 2
+
+
+def test_max_length_random_words():
+    assert max([len(w) for w in utils.get_random_words(92, 4)]) == 4

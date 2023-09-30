@@ -1,12 +1,5 @@
-from word_search_generator.word import (
-    ANY_DIRECTION,
-    BACKWARD_DIRS,
-    FORWARD_DIRS,
-    NO_DIRECTION,
-    Direction,
-    flip_dirs,
-    toggle_ds,
-)
+import word_search_generator.directions as d
+from word_search_generator.direction import Direction, flip_dirs, toggle_ds
 
 
 def test_opposite():
@@ -18,8 +11,8 @@ def test_is_cardinal():
 
 
 def test_ds_toggle():
-    assert toggle_ds(ANY_DIRECTION) == NO_DIRECTION
+    assert toggle_ds(d.ALL) == set()
 
 
 def test_flip_ds():
-    assert flip_dirs(FORWARD_DIRS) == BACKWARD_DIRS
+    assert flip_dirs(d.FORWARD) == d.BACKWARD

@@ -1,13 +1,8 @@
 import pytest
 
-from word_search_generator.word import (
-    ANY_DIRECTION,
-    NO_DIRECTION,
-    NULL_WORD,
-    Direction,
-    Position,
-    Word,
-)
+import word_search_generator.directions as d
+from word_search_generator.direction import Direction
+from word_search_generator.word import NULL_WORD, Position, Word, merge_words
 
 
 def test_empty_start_row():
@@ -88,19 +83,19 @@ def test_word_bool_false():
 
 def test_set_directions():
     w = Word("test")
-    w.allowed_directions = NO_DIRECTION
+    w.allowed_directions = d.ZERO
     w.toggle_allowed_dirs()
     w.flip_allowed_dirs()
-    assert w.allowed_directions == ANY_DIRECTION
+    assert w.allowed_directions == d.ALL
 
 
-high_priority_secret = Word("test", True, 1, NO_DIRECTION)
-low_priority_word = Word("test", False, 93, ANY_DIRECTION)
+high_priority_secret = Word("test", True, 1, d.NONE)
+low_priority_word = Word("test", False, 93, d.ANY)
 
 
 def test_successful_merge():
     w = low_priority_word ^ high_priority_secret
-    assert w.allowed_directions == ANY_DIRECTION
+    assert w.allowed_directions == d.ANY
     assert w.secret is False
     assert w.priority == 1
 
@@ -116,3 +111,13 @@ def test_word_xor_merge():
 def test_invalid_merge():
     with pytest.raises(ValueError):
         high_priority_secret | Word("nope.")
+
+
+# make this one a parameterized test or something
+def test_merge_a_word():
+    assert merge_words(NULL_WORD) is NULL_WORD
+    assert merge_words(low_priority_word) is low_priority_word
+
+
+def test_merge_no_words():
+    assert merge_words() is NULL_WORD

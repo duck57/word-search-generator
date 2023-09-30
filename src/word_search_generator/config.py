@@ -1,11 +1,5 @@
-from .word import (
-    ANY_DIRECTION,
-    CARDINALS,
-    DIAGONALS,
-    FORWARD_DIRS,
-    NO_DIRECTION,
-    Direction,
-)
+from . import directions as _d
+from .direction import Direction, DirectionSet
 
 # puzzle settings
 min_puzzle_size = 5
@@ -22,35 +16,16 @@ INACTIVE = "#"
 
 # puzzle difficulty levels
 # should these all be frozen sets instead?
-level_dirs = {
-    -1: NO_DIRECTION,
-    1: {  # right or down
-        Direction.E,
-        Direction.S,
-    },
-    2: FORWARD_DIRS,
-    3: ANY_DIRECTION,
-    4: {  # no E or S for better hiding
-        # ANY_DIRECTION - {Direction.S, Direction.E}
-        Direction.N,
-        Direction.NE,
-        Direction.SE,
-        Direction.SW,
-        Direction.W,
-        Direction.NW,
-    },
-    5: {  # no E
-        # ANY_DIRECTION - {Direction.E}
-        Direction.N,
-        Direction.NE,
-        Direction.SE,
-        Direction.S,
-        Direction.SW,
-        Direction.W,
-        Direction.NW,
-    },
-    7: DIAGONALS,
-    8: CARDINALS,
+level_dirs: dict[int, DirectionSet] = {
+    -1: _d.NONE,
+    1: _d.CARDINAL & _d.FORWARD,  # E or S, easy
+    2: _d.FORWARD,
+    3: _d.ALL,
+    4: (_d.ALL - {Direction.S, Direction.E}),  # no E or S for better hiding
+    5: _d.ALL - {Direction.E},  # anything but E
+    7: _d.DIAGONAL,
+    8: _d.CARDINAL,
+    10: _d.BACKWARD,
 }
 
 # pdf export settings
