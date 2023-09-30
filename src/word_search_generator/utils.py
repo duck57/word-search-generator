@@ -161,8 +161,13 @@ def get_answer_key_str(
     return ", ".join(get_answer_key_list(words, bbox))
 
 
-def get_random_words(n: int, max_length: int | None = None) -> list[str]:
+def get_random_words(
+    n: int, max_length: int | None = None, min_length: int = 2
+) -> list[str]:
     """Return a list of random dictionary words."""
     if max_length:
-        return random.sample([word for word in WORD_LIST if len(word) <= max_length], n)
+        assert max_length >= min_length
+        return random.sample(
+            [word for word in WORD_LIST if min_length <= len(word) <= max_length], n
+        )
     return random.sample(WORD_LIST, n)

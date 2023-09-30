@@ -6,14 +6,16 @@ from .utils import get_random_words
 from .word import Word, WordList
 
 
-def hundred_random_words(n: int = 100, max_length: int = 0) -> WordList:
+def hundred_random_words(
+    n: int = 100, max_length: int = 0, min_length: int = 4
+) -> WordList:
     """
     Same as above but formatted into Word objects.
     Randomly assigns priority & secret status.
     """
     return sorted(
         Word(w, random.choice((True, False)), random.randint(1, 4))
-        for w in get_random_words(n, max_length)
+        for w in get_random_words(n, max_length, min_length)
     )
 
 
