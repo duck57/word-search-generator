@@ -254,13 +254,13 @@ class Word:
         3. Secrets go last
         4. All else equal, alphabetical
         """
-        if self.priority == other.priority:
-            if len(self) == len(other):
-                if self.secret == other.secret:
-                    return self.text < other.text  # alphabetical as last resort
-                return not self.secret  # Secret words sort last as tiebreak
+        if self.priority != other.priority:
+            return self.priority < other.priority
+        if len(self) != len(other):
             return len(self) > len(other)
-        return self.priority < other.priority
+        if self.secret != other.secret:
+            return not self.secret  # secret words sort last
+        return self.text > other.text  # reverse alpha order
 
     def __or__(self, other: "Word") -> "Word":
         return self.merge(other)

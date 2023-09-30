@@ -1,4 +1,5 @@
 from word_search_generator import utils
+from word_search_generator.word_utils import hundred_random_words
 
 
 def test_stringify():
@@ -49,4 +50,5 @@ def test_float_range_negative():
 
 
 def test_max_length_random_words():
-    assert max([len(w) for w in utils.get_random_words(92, 4)]) == 4
+    # could be a param thing
+    assert max([len(w) for w in hundred_random_words(92, 8)]) == 8
