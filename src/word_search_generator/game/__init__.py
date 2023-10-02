@@ -706,6 +706,9 @@ once more decisions on #51 implementation are made.
 def remove_dupes_and_substrings(*words: Word) -> WordList:
     checked_word_str, verified_words = " ", []  # type: ignore  # mypy doesn't like this
     for w in sorted(words):
+        if w.text == w.text[::-1]:
+            # chuck palindromes
+            continue
         if w.text in checked_word_str:
             # word is a dupe or substring of an existing word
             continue
