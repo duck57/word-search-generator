@@ -8,15 +8,7 @@ from ..formatter import Formatter
 from ..generator import Generator
 from ..mask import CompoundMask, Mask
 from ..validator import Validator
-from ..word import (
-    Direction,
-    DirectionSet,
-    KeyInfo,
-    KeyInfoJson,
-    Word,
-    WordList,
-    WordSet,
-)
+from ..word import Direction, DirectionSet, KeyInfo, KeyInfoJson, Word, WordSet
 
 Puzzle: TypeAlias = list[list[str]]
 Key: TypeAlias = dict[str, KeyInfo]
@@ -129,14 +121,6 @@ class Game:
             self._process_input(secret_words, "add", True)
         if words:
             self._process_input(words, "add")
-
-        # guide code for later dev, currently nothing uses this
-        injected_words: WordList = []  # this will become an input param or something
-        self._word_list_demo = remove_dupes_and_substrings(
-            *self.cleanup_input(words),
-            *self.cleanup_input(secret_words, True),
-            *injected_words,
-        )
 
         # setup required defaults
         if not self.generator:
@@ -695,33 +679,3 @@ class Game:
         if not self.puzzle or not self.formatter:
             return "Empty puzzle."
         return self.formatter.show(self)
-
-
-"""
-Demo functions.  These should be moved into Game methods or inlined
-once more decisions on #51 implementation are made.
-"""
-
-
-def remove_dupes_and_substrings(*words: Word) -> WordList:
-    checked_word_str, verified_words = " ", []  # type: ignore  # mypy doesn't like this
-    for w in sorted(words):
-        if w.text == w.text[::-1]:
-            # chuck palindromes
-            continue
-        if w.text in checked_word_str:
-            # word is a dupe or substring of an existing word
-            continue
-        if any(wd.text in w.text for wd in verified_words):
-            # adding this word would turn a higher priority word into a substring
-            continue
-        # word is cleared to be added
-        checked_word_str += w.text + " "
-        verified_words.append(w)
-    return verified_words
-
-
-def remove_from_word_list(self: WordList, to_remove: WordList) -> WordList:
-    # Should this care about priority at all?
-    # assumes self is not already sorted
-    return [w for w in self if w not in to_remove]
