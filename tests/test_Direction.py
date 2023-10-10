@@ -7,7 +7,7 @@ def test_opposite():
 
 
 def test_is_cardinal():
-    assert Direction.S.is_cardinal
+    assert Direction.S.is_cardinal and not Direction.NW.is_cardinal
 
 
 def test_ds_toggle():
@@ -16,3 +16,15 @@ def test_ds_toggle():
 
 def test_flip_ds():
     assert flip_dirs(d.FORWARD) == d.BACKWARD
+
+
+def test_direction_presets():
+    assert d.NONE == set()
+    assert d.CARDINAL & d.FORWARD == {Direction.E, Direction.S}
+    assert len(d.ANY) == 8
+    assert not (  # test exclusive pairs of presets
+        (d.LEFTWARD & d.RIGHTWARD)
+        | (d.UPWARD & d.DOWNWARD)
+        | (d.FORWARD & d.BACKWARD)
+        | (d.DIAGONAL & d.CARDINAL)
+    )

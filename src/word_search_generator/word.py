@@ -42,19 +42,11 @@ class Word:
         self.direction: Direction | None = None
         self.secret = secret
         self.priority = priority
-        self._allowed_directions = (
-            allowed_directions  # does this need getters & setters?
-        )
-        self.description = description  # the clue/hint for crosswords, for example
+        self.allowed_directions = allowed_directions
+        self.description = (
+            description.strip()
+        )  # the clue/hint for crosswords, for example
         self.validation_errors: str | Exception = ""
-
-    @property
-    def allowed_directions(self) -> DirectionSet:
-        return self._allowed_directions
-
-    @allowed_directions.setter
-    def allowed_directions(self, d: DirectionSet) -> None:
-        self._allowed_directions = d
 
     def validate(
         self, validators: Iterable[Validator], placed_words: list[str]
