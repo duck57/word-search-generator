@@ -7,8 +7,9 @@ from functools import wraps
 from typing import TYPE_CHECKING, Iterable, TypeAlias
 
 from ..config import ACTIVE, INACTIVE, max_fit_tries, max_puzzle_words
+from ..directions import ACROSS, DOWN, CROSSWORD_DIRS
 from ..utils import build_puzzle, in_bounds
-from ..word import Direction, Word, WordSet
+from ..word import Direction, Word, WordSet, Position
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import DirectionSet, Puzzle
@@ -90,6 +91,74 @@ class Generator(ABC):
         Returns:
             Puzzle: Generated puzzle.
         """
+
+
+class CrosswordGenerator(Generator):
+    """
+    Generates a crossword puzzle
+    """
+
+    class Cell:
+        def __init__(self, content: str = ""):
+            # should all already be uppercase & stripped in Word constructor
+            self.content = content.upper().strip()
+            self.contains_words: dict[Direction, Word | None] = {
+                ACROSS: None,
+                DOWN: None,
+            }
+            self.starts_word: set = set()
+
+        @property
+        def word_across(self) -> Word | None:
+            return self.contains_words[ACROSS]
+
+        @property
+        def word_down(self) -> Word | None:
+            return self.contains_words[DOWN]
+
+        @property
+        def open_directions(self) -> DirectionSet:
+            return {d for d in self.contains_words.keys() if not self.contains_words[d]}
+
+        @property
+        def is_available(self) -> bool:
+            return bool(len(self.open_directions))
+
+        def __bool__(self) -> bool:
+            return bool(self.content)
+
+        def __eq__(self, other) -> bool:
+            if isinstance(other, str):
+                return other.upper().strip() == self.content
+            if isinstance(other, Cell):
+                return self.content == other.content
+            return False
+
+    def generate(
+        self,
+        size: int,
+        mask: Puzzle,
+        words: WordSet,
+        directions: DirectionSet,
+        secret_directions: DirectionSet,
+        validators: Iterable[Validator],
+        *args,
+        **kwargs,
+    ) -> Puzzle:
+        # 1. Generate the layout (experimental)
+        # possibly fallback on generating a WordSearch that tries to be very small
+        self.puzzle_dict: "dict[Position, Cell]" = {}
+        for w in sorted(words):
+            self.find_a_place(w)
+            self.place_word(w)
+        # 2. Recenter, cast to List[List[str]]
+        # 3. Number words
+        pass
+
+    def place_word(self, word: Word):
+        if not self.puzzle_dict:  # first word placed
+            d = random.choice([ACROSS, DOWN])
+            s = Position(0, 0)
 
 
 class WordSearchGenerator(Generator):
@@ -224,10 +293,9 @@ class WordSearchGenerator(Generator):
         Some words will be skipped if they don't fit."""
         # try to place each word on the puzzle
         placed_words: list[str] = []
-        hidden_words = [word for word in self.words if not word.secret]
-        secret_words = [word for word in self.words if word.secret]
-        # try to place each secret word on the puzzle first before hidden words
-        for word in hidden_words + secret_words:
+        # Word.lt() & the Game.cleanup_input work together to make it so that
+        # simply sorting Word objects puts the secret words last.
+        for word in sorted(self.words):
             if self.validators and not word.validate(self.validators, placed_words):
                 continue
             fit = self.try_to_fit_word(word)

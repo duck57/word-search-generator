@@ -10,6 +10,9 @@ class Position(NamedTuple):
     column: int | None
 
 
+Bearing: TypeAlias = tuple[Position, Direction]
+
+
 class KeyInfo(TypedDict):
     start: Position | None
     direction: Direction | None
@@ -42,11 +45,10 @@ class Word:
         self.direction: Direction | None = None
         self.secret = secret
         self.priority = priority
-        self._allowed_directions = (
-            allowed_directions  # does this need getters & setters?
-        )
+        self._allowed_directions = allowed_directions
         self.description = description  # the clue/hint for crosswords, for example
         self.validation_errors: str | Exception = ""
+        self.number: int = -1
 
     @property
     def allowed_directions(self) -> DirectionSet:
@@ -107,6 +109,15 @@ class Word:
         """
         self.start_row = value.row
         self.start_column = value.column
+
+    @property
+    def bearing(self) -> Bearing:
+        return self.position, self.direction
+
+    @bearing.setter
+    def bearing(self, value: Bearing) -> None:
+        self.position = value[0]
+        self.direction = value[1]
 
     @property
     def position_xy(self) -> Position:

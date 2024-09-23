@@ -15,3 +15,6 @@ FORWARD = frozenset(
     }
 )
 BACKWARD = ds_not(FORWARD, True)
+ACROSS = Direction.E
+DOWN = Direction.S
+CROSSWORD_DIRS = frozenset({ACROSS, DOWN})
