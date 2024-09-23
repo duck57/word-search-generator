@@ -60,11 +60,15 @@ class Game:
 
     def __init__(
         self,
-        words: str = "",
+        # also accepts preprocessed words
+        words: str | WordSet = "",
         level: int | str | None = None,
         size: int | None = None,
-        secret_words: str = "",
+        # there's no real reason why secret_words would be a WordSet,
+        # but it's like this to be consistent
+        secret_words: str | WordSet = "",
         secret_level: int | str | None = None,
+        preprocessed_words: WordSet | None = None,
         *,
         include_all_words: bool = False,
         generator: Generator | None = None,
@@ -95,7 +99,7 @@ class Game:
             Defaults to `DEFAULT_VALIDATORS`.
         """
         # setup puzzle
-        self._words: WordSet = set()
+        self._words: WordSet = preprocessed_words if preprocessed_words else set()
         self._puzzle: Puzzle = []
         self._size: int = 0
         self._masks: list[Mask] = []
@@ -431,15 +435,14 @@ class Game:
 
     def _process_input(
         self,
-        words: str,
+        words: str | WordSet,
         action: Literal["add", "remove", "replace"] = "add",
         secret: bool = False,
     ):
-        # this function will need major rework for the changes in #51
-        if secret:
-            clean_words = self.cleanup_input(words, secret=True)
-        else:
-            clean_words = self.cleanup_input(words)
+        if isinstance(words, str):
+            clean_words = self.cleanup_input(words, secret=secret)
+        else:  # Word objects are already assembled
+            clean_words = words
 
         if action == "add":
             # remove all new words first so any updates are reflected in the word list
@@ -452,7 +455,7 @@ class Game:
             self._words.update(clean_words)
 
     def add_words(
-        self, words: str, secret: bool = False, reset_size: bool = False
+        self, words: str | WordSet, secret: bool = False, reset_size: bool = False
     ) -> None:
         """Add words to the puzzle.
 
@@ -466,7 +469,7 @@ class Game:
         self._process_input(words, "add", secret)
         self._generate(reset_size=reset_size)
 
-    def remove_words(self, words: str, reset_size: bool = False) -> None:
+    def remove_words(self, words: str | WordSet, reset_size: bool = False) -> None:
         """Remove words from the puzzle.
 
         Args:
@@ -478,7 +481,7 @@ class Game:
         self._generate(reset_size=reset_size)
 
     def replace_words(
-        self, words: str, secret: bool = False, reset_size: bool = False
+        self, words: str | WordSet, secret: bool = False, reset_size: bool = False
     ) -> None:
         """Replace all words from the puzzle.
 
@@ -493,29 +496,21 @@ class Game:
         self._generate(reset_size=reset_size)
 
     def cleanup_input(self, words: str, secret: bool = False) -> WordSet:
-        """Cleanup provided input string. Removing spaces
-        one-letter words, and words with punctuation."""
-        # change the return type to WordList with further progress on #51
+        """
+        Cleanup provided input string. Removes spaces,
+        one-letter words, and words with punctuation.
+        Returns a set of Word objects.
+        """
         if not isinstance(words, str):
             raise TypeError(
                 "Words must be a string separated by spaces, commas, or new lines"
             )
-        # remove new lines
-        words = words.replace("\n", ",")
-        # remove excess spaces and commas
-        word_list = ",".join(words.split(" ")).split(",")
-        # iterate through all words and pick first set that match criteria
-        word_set: WordSet = set()
-        p, d = (
-            (secret_word_priority, self.secret_directions)
-            if secret
-            else (hidden_word_priority, self.directions)
+        return Word.bulk_builder(
+            words,
+            secret,
+            secret_word_priority if secret else hidden_word_priority,
+            self.secret_directions if secret else self.directions,
         )
-        while word_list and len(word_set) <= config.max_puzzle_words:
-            word = word_list.pop(0)
-            if word:
-                word_set.add(Word(word, secret, p, d))
-        return word_set
 
     @staticmethod
     def validate_direction_iterable(

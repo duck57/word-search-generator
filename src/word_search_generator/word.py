@@ -23,6 +23,14 @@ class KeyInfoJson(TypedDict):
     secret: bool
 
 
+def process_raw_string(s: str) -> list[str]:
+    """
+    Converts the raw comma-delimited string into a list of strings,
+    breaking on each comma, newline, or space.
+    """
+    return [s for s in ",".join(s.replace("\n", ",").split(" ")).split(",") if s]
+
+
 class Word:
     """This class represents a Word within a WordSearch puzzle."""
 
@@ -219,6 +227,24 @@ class Word:
     ) -> "Word":
         """Merges identical Words."""
         return merge_words(self, w2, method=method)
+
+    @classmethod
+    def bulk_builder(
+        cls,
+        words: str | list[str],
+        secret: bool = False,
+        priority: int = 3,
+        directions=_dirs.FORWARD,
+    ) -> "WordSet":
+        if isinstance(words, str):
+            words = process_raw_string(words)
+        return {cls(w, secret, priority, directions) for w in words}
+
+    @staticmethod
+    def to_comma_string(wl: "Iterable[Word]", lower: bool = False):
+        if lower:
+            return ",".join(str(w).lower() for w in wl)
+        return ",".join(str(w) for w in wl)
 
     def __and__(self, other: "Word") -> "Word":
         return self.merge(other, "&")

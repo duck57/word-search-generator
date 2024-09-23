@@ -28,6 +28,11 @@ def secret_words():
 
 
 @pytest.fixture
+def preprocessed_words():
+    return {Word("Zebra", False, 4, {Direction.NW}, "A striped horse.")}
+
+
+@pytest.fixture
 def ws(words):
     return WordSearch(words)
 

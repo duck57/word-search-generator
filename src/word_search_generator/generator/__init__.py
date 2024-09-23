@@ -224,10 +224,9 @@ class WordSearchGenerator(Generator):
         Some words will be skipped if they don't fit."""
         # try to place each word on the puzzle
         placed_words: list[str] = []
-        hidden_words = [word for word in self.words if not word.secret]
-        secret_words = [word for word in self.words if word.secret]
-        # try to place each secret word on the puzzle first before hidden words
-        for word in hidden_words + secret_words:
+        # Word.lt() & the Game.cleanup_input work together to make it so that
+        # simply sorting Word objects puts the secret words last.
+        for word in sorted(self.words):
             if self.validators and not word.validate(self.validators, placed_words):
                 continue
             fit = self.try_to_fit_word(word)

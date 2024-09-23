@@ -7,10 +7,12 @@ import pytest
 
 from word_search_generator import WordSearch, utils
 from word_search_generator.config import level_dirs
+from word_search_generator.directions import BACKWARD, CARDINAL
 from word_search_generator.formatter.word_search_formatter import WordSearchFormatter
 from word_search_generator.game import Key, MissingWordError, Puzzle, PuzzleSizeError
 from word_search_generator.mask.polygon import Rectangle
 from word_search_generator.validator import NoSingleLetterWords
+from word_search_generator.word import Word
 
 formatter = WordSearchFormatter()
 
@@ -397,3 +399,14 @@ def test_no_words_to_generate(ws: WordSearch):
     ws._words = set()
     ws._generate()
     assert ws.puzzle == []
+
+
+def test_preprocessed_words(words, secret_words, preprocessed_words):
+    """Switches the secret bool for words & secret words"""
+    words = Word.bulk_builder(words, True, 2)
+    not_secret = Word.bulk_builder(secret_words, False, 5, CARDINAL & BACKWARD)
+    ws = WordSearch(
+        words=words, secret_words=not_secret, preprocessed_words=preprocessed_words
+    )
+    assert "zebra" in Word.to_comma_string(ws.placed_hidden_words, True)
+    assert "HORSE" in Word.to_comma_string(ws.placed_secret_words)
